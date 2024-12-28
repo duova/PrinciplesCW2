@@ -1,5 +1,4 @@
 public class Creature extends Piece {
-
     //We ensure that they have a turn when they use turn-based functions to prevent badly implemented controllers
     //from violating the one action per turn rule.
     private boolean hasTurn = false;
@@ -58,23 +57,43 @@ public class Creature extends Piece {
     }
 
     public CommandResult moveCommand(Direction direction) {
-        
+        if (!hasTurn) return new CommandResult(false);
+        hasTurn = false;
+        int xDelta = 0;
+        int yDelta = 0;
+        switch (direction) {
+            case N:
+                yDelta = 1;
+                break;
+            case E:
+                xDelta = 1;
+                break;
+            case S:
+                yDelta = -1;
+                break;
+            case W:
+                xDelta = -1;
+                break;
+        }
+        if (!getMap().tiles[getX() + xDelta][getY() + yDelta].isWall) {
+            setLocation(getX() + xDelta,getY() + yDelta);
+            return new CommandResult(true);
+        }
+        return new CommandResult(false);
     }
 
     public QuitCommandResult quitCommand() {
-
+        if (!hasTurn) return new QuitCommandResult(false, false);
+        hasTurn = false;
+        if (interact('E')) {
+            return new QuitCommandResult(true, true);
+        }
+        return new QuitCommandResult(true, false);
     }
 
     private boolean interact(char interactChar) {
         Tile tile = getMap().tiles[getX()][getY()];
-        for (int i = tile.pieces.size() - 1; i >= 0; i--) {
-            if (tile.pieces.get(i) instanceof Interactable interactable) {
-                if (interactable.useCommandOnTile(interactChar, this)) {
-                    return true;
-                }
-            }
-        }
-        return false;
+        return tile.useCommandOnTile(interactChar, this);
     }
 
     @Override

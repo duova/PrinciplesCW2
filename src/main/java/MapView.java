@@ -1,10 +1,15 @@
 public class MapView {
     public Tile[][] tiles;
 
+    public int xTranslation;
+    public int yTranslation;
+
     /**
      * Constructor will fill in blank space with new wall tiles and as such ranges outside of bounds can be used.
      */
     public MapView(DungeonMap map, int xMinInclusive, int xMaxInclusive, int yMinInclusive, int yMaxInclusive) {
+        xTranslation = xMinInclusive;
+        yTranslation = yMinInclusive;
         tiles = new Tile[xMaxInclusive - xMinInclusive + 1][yMaxInclusive - yMinInclusive + 1];
         int x = xMinInclusive;
         int y = yMinInclusive;
