@@ -16,19 +16,34 @@ public class HumanController implements Controller {
 
         switch (command) {
             case "HELLO":
-                player.helloCommand();
+                HelloCommandResult helloResult = player.helloCommand();
+                System.out.println("Gold to win: " + helloResult.goldToWin);
                 break;
             case "GOLD":
-                player.goldCommand();
+                GoldCommandResult goldResult = player.goldCommand();
+                System.out.println("Gold owned: " + goldResult.goldOwned);
                 break;
             case "PICKUP":
-                player.pickUpCommand();
+                PickUpCommandResult pickUpResult = player.pickUpCommand();
+                if (!pickUpResult.success) {
+                    System.out.println("Fail");
+                    break;
+                }
+                System.out.println("Success. Gold owned: " + pickUpResult.currentGold);
                 break;
             case "LOOK":
-                player.lookCommand();
+                LookCommandResult lookResult = player.lookCommand();
+                System.out.println(MapRenderer.renderAsString(lookResult.visibleMap));
                 break;
             case "QUIT":
-                player.quitCommand();
+                QuitCommandResult quitResult = player.quitCommand();
+                if (quitResult.win) {
+                    System.out.println("Win");
+                }
+                else {
+                    System.out.println("Lose");
+                }
+                Main.freeze = true;
                 break;
             default:
                 if (command.length() > 4
@@ -37,7 +52,8 @@ public class HumanController implements Controller {
                         || command.endsWith("E")
                         || command.endsWith("S")
                         || command.endsWith("W"))) {
-                    player.moveCommand(Direction.valueOf(command.substring(command.length() - 2, command.length() - 1)));
+                    CommandResult moveResult = player.moveCommand(Direction.valueOf(command.substring(command.length() - 2, command.length() - 1)));
+                    System.out.println(moveResult.success ? "Success" : "Fail");
                 }
                 System.out.println("Invalid command, try again:");
                 executeTurn();

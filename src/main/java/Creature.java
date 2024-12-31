@@ -13,24 +13,32 @@ public class Creature extends Piece {
 
     private char letter;
 
+    private Controller controller;
+
     public Creature(CreatureArgs args) {
         super(args.x, args.y, args.map);
         goldToWin = args.map.winCount;
         sightWidth = args.sightWidth;
         sightHeight = args.sightHeight;
         letter = args.letter;
+        controller = args.controller;
+        controller.linkPlayer(this);
     }
 
     public void allowCreatureToAct() {
         hasTurn = true;
     }
 
+    public void act() {
+        controller.executeTurn();
+    }
+
     public LookCommandResult lookCommand() {
         if (!hasTurn) new LookCommandResult(false, null);
         hasTurn = false;
         MapView view = new MapView(getMap(),
-                getX() - 2, getX() + 2,
-                getY() - 2, getY() + 2);
+                getX() - ((sightWidth - 1) / 2), getX() + ((sightWidth - 1) / 2),
+                getY() - ((sightHeight - 1) / 2), getY() + ((sightHeight - 1) / 2));
         return new LookCommandResult(true, view);
     }
 

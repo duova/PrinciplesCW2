@@ -1,3 +1,5 @@
+import java.util.Random;
+
 public class DungeonMap {
     //Indexed in positive x then positive y.
     public Tile[][] tiles;
@@ -11,6 +13,31 @@ public class DungeonMap {
                 tile = new Tile();
             }
         }
+    }
+
+    public Vec getSpawnLocation() {
+        int numPossibleTiles = 0;
+        for (int x = 0; x < tiles.length; x++) {
+            for (int y = 0; y < tiles[0].length; y++) {
+                if (tiles[x][y].pieces.isEmpty() && !tiles[x][y].isWall) {
+                    numPossibleTiles++;
+                }
+            }
+        }
+        Random rand = new Random();
+        int randomNumber = rand.nextInt(numPossibleTiles);
+        int i = 0;
+        for (int x = 0; x < tiles.length; x++) {
+            for (int y = 0; y < tiles[0].length; y++) {
+                if (tiles[x][y].pieces.isEmpty() && !tiles[x][y].isWall) {
+                    if (i == randomNumber) {
+                        return new Vec(x, y);
+                    }
+                    i++;
+                }
+            }
+        }
+        return new Vec(0, 0);
     }
 
     public static DungeonMap fromString(String map) {

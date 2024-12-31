@@ -42,6 +42,8 @@ public class BotController implements Controller {
                 }
                 else {
                     player.quitCommand();
+                    System.out.println("LOSE (Bot Exited First)");
+                    Main.freeze = true;
                     command = BotCommand.NONE;
                 }
             }
