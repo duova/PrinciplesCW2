@@ -1,3 +1,6 @@
+/***
+ * A MapView contains references to the tiles on a section of the map. It's used to represent a creature's view.
+ */
 public class MapView {
     public Tile[][] tiles;
 
@@ -11,10 +14,8 @@ public class MapView {
         xTranslation = xMinInclusive;
         yTranslation = yMinInclusive;
         tiles = new Tile[xMaxInclusive - xMinInclusive + 1][yMaxInclusive - yMinInclusive + 1];
-        int x = xMinInclusive;
-        int y = yMinInclusive;
-        for (x = xMinInclusive; x < xMaxInclusive + 1; x++) {
-            for (y = yMinInclusive; y < yMaxInclusive + 1; x++) {
+        for (int x = xMinInclusive; x < xMaxInclusive + 1; x++) {
+            for (int y = yMinInclusive; y < yMaxInclusive + 1; y++) {
                 if (x < 0 || x >= map.tiles.length || y < 0 || y >= map.tiles[x].length) {
                     Tile fillTile = new Tile();
                     fillTile.isWall = true;

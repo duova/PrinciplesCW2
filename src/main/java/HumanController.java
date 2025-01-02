@@ -37,6 +37,10 @@ public class HumanController implements Controller {
                 break;
             case "QUIT":
                 QuitCommandResult quitResult = player.quitCommand();
+                if (!quitResult.success) {
+                    System.out.println("No turn.");
+                    break;
+                }
                 if (quitResult.win) {
                     System.out.println("Win");
                 }
@@ -46,14 +50,16 @@ public class HumanController implements Controller {
                 Main.freeze = true;
                 break;
             default:
+                //Handle cases with conditional characters or invalid inputs.
                 if (command.length() > 4
                         && command.startsWith("MOVE")
                         && (command.endsWith("N")
                         || command.endsWith("E")
                         || command.endsWith("S")
                         || command.endsWith("W"))) {
-                    CommandResult moveResult = player.moveCommand(Direction.valueOf(command.substring(command.length() - 2, command.length() - 1)));
+                    CommandResult moveResult = player.moveCommand(Direction.valueOf(command.substring(command.length() - 1)));
                     System.out.println(moveResult.success ? "Success" : "Fail");
+                    break;
                 }
                 System.out.println("Invalid command, try again:");
                 executeTurn();

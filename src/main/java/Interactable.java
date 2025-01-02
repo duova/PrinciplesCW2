@@ -1,10 +1,14 @@
+/***
+ * Interactables can be interacted with by creatures, calling their onInteract function through the Tile.
+ */
 public abstract class Interactable extends Piece {
-    public String interactCommand;
-    public char displayLetter;
-
     public Interactable(int x, int y, DungeonMap map) {
         super(x, y, map);
     }
 
-    protected abstract void onInteract();
+    /***
+     * Called when a creature interacts with this interactable.
+     * @param creature Creature interacting.
+     */
+    protected abstract void onInteract(Creature creature);
 }

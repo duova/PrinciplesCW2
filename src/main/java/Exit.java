@@ -10,7 +10,7 @@ public class Exit extends Interactable {
     }
 
     @Override
-    public void onInteract() {
-
+    public void onInteract(Creature creature) {
+        //Empty as the functionality is implemented by the controller due to different implementations for the player and bot.
     }
 }

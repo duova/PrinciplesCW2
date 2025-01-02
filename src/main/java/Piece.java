@@ -25,8 +25,8 @@ public abstract class Piece {
 
     /**
      * Sets new location of the piece without performing checks but updates the map.
-     * @param x
-     * @param y
+     * @param x New location x coordinates.
+     * @param y New location y coordinates.
      */
     public void setLocation(int x, int y) {
         map.tiles[this.x][this.y].pieces.remove(this);
@@ -35,5 +35,9 @@ public abstract class Piece {
         map.tiles[x][y].pieces.add(this);
     }
 
+    /***
+     * Gets char used to represent this piece visually.
+     * @return
+     */
     public abstract char getDisplayLetter();
 }

@@ -10,7 +10,7 @@ public class Gold extends Interactable {
     }
 
     @Override
-    public void onInteract() {
-
+    public void onInteract(Creature creature) {
+        creature.addGold();
     }
 }

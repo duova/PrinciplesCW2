@@ -1,5 +1,6 @@
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.util.Map;
 import java.util.Scanner;
 
 public class Main {
@@ -28,10 +29,16 @@ public class Main {
         creatureArgs.letter = 'B';
         Creature bot = new Creature(creatureArgs);
 
+        //Turn while loop.
         while (true) {
+            //Enable for debug full map view.
+            System.out.println(MapRenderer.renderAsString(new MapView(map, 0, 19, 0, 8)));
+
+            //allowCreatureToAct() must be called before act to enforce the one command per turn rule.
             player.allowCreatureToAct();
             player.act();
             handleBotPlayerContact(player, bot);
+            //The game should be frozen after a win or loss so players can read the text, and does so by setting freeze to true.
             while (freeze);
             bot.allowCreatureToAct();
             bot.act();
@@ -40,13 +47,16 @@ public class Main {
         }
     }
 
+    /***
+     * Gets the map from a file from a path read from console.
+     * @return The string read from the file.
+     */
     private static String getMapAsString() {
         Scanner consoleScanner = new Scanner(System.in);
         System.out.println("Map file path:");
         String path = consoleScanner.nextLine();
-        try {
-            File file = new File(path);
-            Scanner fileScanner = new Scanner(file);
+        File file = new File(path);
+        try (Scanner fileScanner = new Scanner(file)) {
             StringBuilder mapString = new StringBuilder();
             while (fileScanner.hasNextLine()) {
                 String data = fileScanner.nextLine();
@@ -62,7 +72,12 @@ public class Main {
     private static boolean checkBotContactingPlayer(Creature player, Creature bot) {
         return player.getX() == bot.getX() && player.getY() == bot.getY();
     }
-    
+
+    /***
+     * Checks if the bot is on the same tile as the player, in which case it prints the game loss text.
+     * @param player The player creature.
+     * @param bot The bot creature.
+     */
     private static void handleBotPlayerContact(Creature player, Creature bot) {
         if (checkBotContactingPlayer(player, bot)) {
             System.out.println("LOSE (Bot Caught The Player)");

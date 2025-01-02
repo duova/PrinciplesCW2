@@ -1,47 +1,61 @@
 import java.util.*;
 
+/**
+ * The implementation of the controller for the bot.
+ */
 public class BotController implements Controller {
-    Creature player;
-    Stack<Direction> directions = new Stack<Direction>();
-    BotCommand command;
-    boolean canExit;
+    private Creature creature;
+    //Queued directions for the bot. A stack is used as the A* algorithm produces a path backwards.
+    private Stack<Direction> directions = new Stack<Direction>();
+    //Current command that is being executed by the bot. This is persistent across turns as multiple turns are required for most.
+    private BotCommand command = BotCommand.NONE;
+    //A gold estimate is saved as it would be inefficient to check the gold count constantly.
+    private int goldCollected;
+    //Retrieved at the start.
+    private int requiredGold = -1;
 
+    private final Random rand = new Random();
 
     @Override
     public void linkPlayer(Creature player) {
-        this.player = player;
+        this.creature = player;
     }
 
     @Override
     public void executeTurn() {
+        if (requiredGold == -1) {
+            requiredGold = creature.helloCommand().goldToWin;
+            return;
+        }
+        //We make sure each turn performs no more than one command, though there is a check in creature that prevents
+        //more than one command from being run each turn anyway. Each turn is used optimally and as much information
+        //is cached as possible, since the controller respects the rules that the player has.
         switch (command) {
             case NONE -> {
                 selectCommand();
             }
             case WANDER, CATCH -> {
-                if (!directions.empty()) {
-                    player.moveCommand(directions.pop());
-                }
-                else {
+                creature.moveCommand(directions.pop());
+                if (directions.empty()) {
                     command = BotCommand.NONE;
-                    selectCommand();
                 }
             }
             case PICKUP -> {
                 if (!directions.empty()) {
-                    player.moveCommand(directions.pop());
+                    creature.moveCommand(directions.pop());
                 }
                 else {
-                    player.pickUpCommand();
+                    goldCollected = creature.pickUpCommand().currentGold;
                     command = BotCommand.NONE;
                 }
             }
             case EXIT -> {
                 if (!directions.empty()) {
-                    player.moveCommand(directions.pop());
+                    creature.moveCommand(directions.pop());
                 }
                 else {
-                    player.quitCommand();
+                    //Shouldn't need to recheck as in order for this command to be used it must have enough gold.
+                    creature.quitCommand();
                     System.out.println("LOSE (Bot Exited First)");
                     Main.freeze = true;
                     command = BotCommand.NONE;
@@ -50,8 +64,13 @@ public class BotController implements Controller {
         }
     }
 
+    /**
+     * Decides on what to do for the coming turns.
+     */
     private void selectCommand() {
-        LookCommandResult lookResult = player.lookCommand();
+        directions.clear();
+        LookCommandResult lookResult = creature.lookCommand();
+        //Note that we get a MapView here which is only the section of the map that the bot can see.
         Tile[][] tiles = lookResult.visibleMap.tiles;
         ArrayList<Piece> possibleTargets = new ArrayList<Piece>();
         for (int x = 0; x < tiles.length; x++) {
@@ -63,14 +82,23 @@ public class BotController implements Controller {
         Piece target = null;
         //Prioritize player.
         for (Piece piece : possibleTargets) {
-            if (piece instanceof Creature && piece != player) {
-                target = player;
+            if (piece instanceof Creature && piece != creature) {
+                target = piece;
                 command = BotCommand.CATCH;
                 break;
             }
         }
+        //Otherwise get enough gold and exit assuming they are within view.
         if (target == null) {
-            if (!canExit) {
+            if (goldCollected >= requiredGold) {
+                for (Piece piece : possibleTargets) {
+                    if (piece instanceof Exit) {
+                        target = piece;
+                        command = BotCommand.EXIT;
+                        break;
+                    }
+                }
+            } else {
                 for (Piece piece : possibleTargets) {
                     if (piece instanceof Gold) {
                         target = piece;
@@ -79,56 +107,65 @@ public class BotController implements Controller {
                     }
                 }
             }
-            else {
-                for (Piece piece : possibleTargets) {
-                    if (piece instanceof Exit) {
-                        target = piece;
-                        command = BotCommand.EXIT;
-                        break;
-                    }
-                }
-            }
         }
+        //If nothing can be seen then we just pick a random location within view and walk over.
         if (target == null) wander(lookResult.visibleMap);
         else {
+            //If a target has been select we calculate a path for it.
             boolean canCalculatePath = calculatePath(lookResult.visibleMap,
-                    player.getX() - lookResult.visibleMap.xTranslation,
-                    player.getY() - lookResult.visibleMap.yTranslation,
+                    creature.getX() - lookResult.visibleMap.xTranslation,
+                    creature.getY() - lookResult.visibleMap.yTranslation,
                     target.getX() - lookResult.visibleMap.xTranslation,
                     target.getY() - lookResult.visibleMap.yTranslation);
             if (!canCalculatePath) wander(lookResult.visibleMap);
         }
     }
 
+    /***
+     * Sets bot to wander.
+     * @param view Bot's view.
+     */
     private void wander(MapView view) {
         command = BotCommand.WANDER;
-        int count = view.tiles.length * view.tiles[0].length;
-        generateRandomPath(view, count);
+        generateRandomPath(view);
     }
 
-    private void generateRandomPath(MapView view, int count) {
-        Random rand = new Random();
-        int randomNumber = rand.nextInt(count);
+    /***
+     * Generates a path to a random location within a given view.
+     * @param view Provided view.
+     */
+    private void generateRandomPath(MapView view) {
+        int randomNumber = rand.nextInt(view.tiles.length * view.tiles[0].length);
         int i = 0;
         for (int x = 0; x < view.tiles.length; x++) {
             for (int y = 0; y < view.tiles[0].length; y++) {
                 if (i == randomNumber) {
-                    if (view.tiles[x][y].isWall || !calculatePath(view, 2, 2, x, y)) {
-                        generateRandomPath(view, count);
+                    //We have to re-randomize if the random number is a wall, doesn't have a viable path, or is the location we're already at.
+                    if (view.tiles[x][y].isWall || !calculatePath(view, 2, 2, x, y) || x == 2 && y == 2) {
+                        generateRandomPath(view);
                     }
-                    break;
+                    return;
                 }
                 i++;
             }
         }
     }
 
+    /***
+     * An implementation of A* that uses tiles as nodes. Path is written to the destination stack.
+     * @param view View of the map used.
+     * @param originLocalX Origin x relative to the view.
+     * @param originLocalY Origin y relative to the view.
+     * @param targetLocalX Target x relative to the view.
+     * @param targetLocalY Target y relative to the view.
+     * @return Whether a path was found.
+     */
     private boolean calculatePath(MapView view, int originLocalX, int originLocalY, int targetLocalX, int targetLocalY) {
-        //Minimal A* pathfinding impl.
         Tile targetTile = view.tiles[targetLocalX][targetLocalY];
         for (int x = 0; x < view.tiles.length; x++) {
             for (int y = 0; y < view.tiles[0].length; y++) {
                 Tile tile = view.tiles[x][y];
+                tile.resetPathfinding();
                 //Cache necessary information.
                 tile.x = x;
                 tile.y = y;
@@ -138,18 +175,20 @@ public class BotController implements Controller {
                 tile.adjacentTiles[3] = coordinatesExist(view.tiles, x - 1, y) ? view.tiles[x - 1][y] : null;
             }
         }
-        ArrayList<Tile> openList = new ArrayList<Tile>();
-        ArrayList<Tile> closedList = new ArrayList<Tile>();
+        //Minimal A* impl.
+        ArrayList<Tile> openList = new ArrayList<>();
+        ArrayList<Tile> closedList = new ArrayList<>();
         openList.add(view.tiles[originLocalX][originLocalY]);
         while (true) {
+            if (openList.isEmpty()) return false;
             openList.sort(Comparator.comparing(Tile::GetFValue));
             Tile currentTile = openList.getFirst();
             closedList.add(currentTile);
             if (currentTile == targetTile) break;
             openList.remove(currentTile);
             for (Tile tile : currentTile.adjacentTiles) {
-                if (tile.isWall) continue;
-                if (closedList.contains(tile)) continue;
+                //Walls should be avoided.
+                if (tile == null || tile.isWall || closedList.contains(tile)) continue;
                 if (!openList.contains(tile)) {
                     openList.add(tile);
                     tile.parent = currentTile;
@@ -166,26 +205,9 @@ public class BotController implements Controller {
         }
         Tile reverseCurrentTile = targetTile;
         while (reverseCurrentTile.parent != null) {
-            int directionIndex = 0;
-            for (int i = 0; i < 4; i++) {
-                if (reverseCurrentTile.parent.adjacentTiles[i] == reverseCurrentTile) {
-                    directionIndex = i;
-                }
-            }
-            switch (directionIndex) {
-                case 0:
-                    directions.push(Direction.N);
-                    break;
-                case 1:
-                    directions.push(Direction.E);
-                    break;
-                case 2:
-                    directions.push(Direction.S);
-                    break;
-                case 3:
-                    directions.push(Direction.W);
-                    break;
-            }
+            Direction direction = getDirection(reverseCurrentTile);
+            //Push directions onto a stack as they're retrieved in reverse.
+            directions.push(direction);
             reverseCurrentTile = reverseCurrentTile.parent;
         }
         if (reverseCurrentTile.x == originLocalX && reverseCurrentTile.y == originLocalY) {
@@ -195,6 +217,22 @@ public class BotController implements Controller {
             directions.clear();
             return false;
         }
+    }
+
+    private static Direction getDirection(Tile reverseCurrentTile) {
+        int directionIndex = 0;
+        for (int i = 0; i < 4; i++) {
+            if (reverseCurrentTile.parent.adjacentTiles[i] == reverseCurrentTile) {
+                directionIndex = i;
+            }
+        }
+        return switch (directionIndex) {
+            case 0 -> Direction.N;
+            case 1 -> Direction.E;
+            case 2 -> Direction.S;
+            case 3 -> Direction.W;
+            default -> throw new IllegalStateException("Unexpected value: " + directionIndex);
+        };
     }
 
     private float getDistanceSquared(float x1, float y1, float x2, float y2) {

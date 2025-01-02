@@ -3,5 +3,6 @@ public class QuitCommandResult extends CommandResult {
 
     public QuitCommandResult(boolean success, boolean win) {
         super(success);
+        this.win = win;
     }
 }

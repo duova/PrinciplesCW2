@@ -1,20 +1,28 @@
 import java.util.Random;
 
+/***
+ * Representation of the dungeon map, should be created with DungeonMap.fromString();
+ */
 public class DungeonMap {
     //Indexed in positive x then positive y.
     public Tile[][] tiles;
 
     public int winCount;
 
-    private DungeonMap(int width, int height) {
+    //Private constructor is used to create an empty DungeonMap of a specific size.
+    protected DungeonMap(int width, int height) {
         tiles = new Tile[width][height];
-        for (Tile[] column : tiles) {
-            for (Tile tile : column) {
-                tile = new Tile();
+        for (int x = 0; x < tiles.length; x++) {
+            for (int y = 0; y < tiles[0].length; y++) {
+                tiles[x][y] = new Tile();
             }
         }
     }
 
+    /***
+     * Finds a random feasible spawn location on this map.
+     * @return The location.
+     */
     public Vec getSpawnLocation() {
         int numPossibleTiles = 0;
         for (int x = 0; x < tiles.length; x++) {
@@ -40,6 +48,13 @@ public class DungeonMap {
         return new Vec(0, 0);
     }
 
+    /***
+     * Creates a DungeonMap from the map string.
+     * The reason a static function is used instead of a constructor is so future impl of DungeonMap initializers
+     * can use just a string for its params as well.
+     * @param map The map in string form.
+     * @return Initialized DungeonMap.
+     */
     public static DungeonMap fromString(String map) {
         int winTokenIndex = map.indexOf("win");
         String winCountSubstring = map.substring(winTokenIndex, map.indexOf("\n", winTokenIndex));
@@ -59,7 +74,9 @@ public class DungeonMap {
         y = yCount - 1;
         DungeonMap parsedMap = new DungeonMap(xCount, yCount);
         parsedMap.winCount = winCount;
-        for (char character : mapSubstring.toCharArray()) {
+        for (int i = 0; i < mapSubstring.length(); i++) {
+            char character = mapSubstring.charAt(i);
+            if (character == '\n') continue;
             Tile tile = parsedMap.tiles[x][y];
             if (character == '#') {
                 tile.isWall = true;
@@ -72,10 +89,16 @@ public class DungeonMap {
             }
 
             //Move to next position.
+            //Iterates with inverted y as (0, 0) is the bottom left in console.
             x++;
-            if (x <= xCount) {
+            if (x >= xCount) {
                 x = 0;
-                y--;
+                if (y > 0) {
+                    y--;
+                }
+                else {
+                    break;
+                }
             }
         }
         return parsedMap;
